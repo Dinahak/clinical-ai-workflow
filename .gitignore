@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Data (optional but recommended)
+data/*.csv
+data/*.txt
+
+# FAISS index (large files)
+*.index
+*.faiss
+
+# Logs
+*.log
+
