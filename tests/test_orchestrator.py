@@ -43,3 +43,24 @@ for i, t in enumerate(report.test_recommendations, 1):
 print(f"\nAudit steps  : {[a.step for a in report.audit_trail]}")
 print(f"\nDisclaimer   : {report.disclaimer}")
 print("\nPhase 5 complete.")
+
+print("\n" + "=" * 55)
+print("TC002 — Type 2 Diabetes")
+print("=" * 55)
+
+from agents.documentation_agent import DiagnosticOrchestrator
+orch2 = DiagnosticOrchestrator()
+
+report2 = orch2.run(
+    raw_input="6-week history of excessive thirst, frequent urination, blurred vision, weight loss, tingling in both feet.",
+    case_id="TC002",
+    age=61,
+    sex="M",
+    pmh=["Hypertension", "Hypercholesterolaemia"],
+    medications=["Amlodipine 5mg", "Atorvastatin 20mg"],
+    vitals={"rbg": 18.4}
+)
+
+print(f"Differentials : {[d.diagnosis for d in report2.differentials]}")
+print(f"Investigations: {[t.test_name for t in report2.test_recommendations]}")
+print(f"Urgent alerts : {report2.urgent_alerts}")
