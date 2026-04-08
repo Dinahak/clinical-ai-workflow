@@ -1,45 +1,33 @@
-# Rare Disease Diagnostic Agent — Project Specification
+# Clinical AI Workflow — Family Medicine Decision support — Project Specification
 
 ## Overview
 
-This project explores the use of local large language models and retrieval-augmented reasoning to support clinicians in generating differential diagnoses for rare genetic diseases.
+This project explores the use of local large language models and retrieval-augmented reasoning to support clinicians in generating differential diagnoses for common chronic diseases.
 
-Rare diseases are frequently under-recognized due to their low prevalence and complex symptom patterns. The goal of this system is to assist clinicians by suggesting potential rare disease candidates based on patient phenotype information.
+## 💡 The Problem
 
-The system analyzes:
+Family medicine clinicians are under enormous pressure:
 
-- Free-text clinical case descriptions
-- Structured phenotype terms
-- Optional genomic findings
+- **High patient load** — GPs see 30–50 patients per day, leaving little time for deep diagnostic reasoning
+- **Diagnostic delays** — undifferentiated presentations are easy to miss without structured support
+- **Unnecessary testing** — without clear guidance, over-investigation is common and costly
+- **Documentation burden** — administrative work consumes up to 40% of a clinician's day
 
-The output is a ranked list of candidate rare diseases with explanations and supporting evidence retrieved from a curated knowledge base.
+## ✅ What This System Does
 
-This project is implemented as a research prototype and is not intended for clinical deployment.
+This tool acts as a **clinical decision support assistant** running alongside the physician. It does not replace clinical judgement — it handles the cognitive groundwork so the clinician can focus on the patient.
+
+| The clinician inputs... | The system returns... |
+|-------------------------|----------------------|
+| A consultation note, voice transcript, or EHR export | Structured symptom list with clinical codes |
+| Patient age, sex, and history | Ranked differential diagnoses with confidence scores |
+| Free-text or structured data | Evidence-backed test recommendations |
+| Any case with red-flag features | Immediate urgent alert before anything else |
 
 ## Scope and Goals
 
-The system is designed to assist clinicians in exploring possible rare disease diagnoses.
+An AI-powered multi-agent system designed to support family medicine clinicians by reducing burnout, improving diagnostic accuracy, and recommending cost-effective, evidence-based investigations.
 
-### Supported Inputs
-
-The system accepts the following types of information:
-
-- Free-text clinical narratives (e.g., history and physical notes)
-- Structured phenotype terms such as HPO codes
-- Patient demographics (age, sex)
-- Family history
-- Laboratory summaries
-- Optional genetic findings (gene variants)
-
-### System Outputs
-
-The system generates:
-
-- A ranked list of candidate rare diseases
-- Short explanations for each candidate
-- Key discriminating features supporting or contradicting each hypothesis
-- Suggested follow-up questions or diagnostic tests
-- Links to supporting evidence from the knowledge base
 
 ### Non-Goals
 
@@ -49,6 +37,25 @@ The system is not intended to:
 - Recommend medications or treatments
 - Provide emergency triage guidance
 - Be used directly by patients without clinician oversight
+
+## 🚑 Key Features
+
+- 🔍 **Symptom extraction** — Reads clinical notes and maps symptoms to standardised medical terminology (HPO codes)
+- 🧠 **AI differential diagnosis** — Powered by Qwen2.5-72B (local LLM), generates ranked differentials with supporting evidence
+- 📚 **Evidence retrieval (RAG)** — Searches a curated knowledge base of NICE guidelines, RCGP protocols, and primary care literature
+- ⚠️ **Red-flag detection** — Automatically surfaces cannot-miss diagnoses (sepsis, PE, meningitis, etc.) before other output
+- 🧪 **Test recommendations** — Suggests investigations prioritised by clinical yield and cost-effectiveness
+- 🧾 **Audit trail** — Every inference step is logged in an append-only store for transparency and clinical governance
+
+  ## 💼 Business & Clinical Value
+
+| Value | Impact |
+|-------|--------|
+| ⏱️ Saves clinician time | More capacity per session; less after-hours documentation |
+| 💰 Reduces unnecessary testing | Targets 15–30% reduction in low-yield investigations |
+| 📉 Reduces diagnostic errors | Structured red-flag detection catches what fatigue misses |
+| 📊 Improves documentation | Automated audit trail supports quality improvement and medico-legal compliance |
+| 🔒 Keeps data local | LLM runs on-device — no patient data leaves the clinic |
 
   ## High-Level Architecture
 
