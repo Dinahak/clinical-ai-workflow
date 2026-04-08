@@ -1,26 +1,60 @@
-# Rare_Genetic_Disease_Diagnostic_Agent
-This repository is an offline clinical decision support prototype that suggest rare disease differentials and evidence.
+# Clinical AI Workflow — Family Medicine Decision support 
+An AI-powered multi-agent system designed to support family medicine clinicians by reducing burnout, improving diagnostic accuracy, and recommending cost-effective, evidence-based investigations.
 
 
-# Key Features
+## Key Features
 
-- Free-text clinical case analysis
-- Phenotype extraction and HPO normalization
-- Differential diagnosis ranking
-- Evidence-linked reasoning
-- Follow-up diagnostic suggestions
-- Fully local deployment (privacy-first)
+-  **Symptom extraction** — Reads clinical notes and maps symptoms to standardised medical terminology (HPO codes)
+-  **AI differential diagnosis** — Powered by Qwen2.5-72B (local LLM), generates ranked differentials with supporting evidence
+-  **Evidence retrieval (RAG)** — Searches a curated knowledge base 
+-  **Red-flag detection** — Automatically surfaces cannot-miss diagnoses before other output
+-  **Test recommendations** — Suggests investigations prioritised by clinical yield and cost-effectiveness
+-  **Audit trail** — Every inference step is logged in an append-only store for transparency and clinical governance
 
-## Core Technologies
+# How It Works
 
-- Local LLM (Llama)
-- Vector database for medical knowledge retrieval
-- Agentic orchestration
-- Retrieval-Augmented Generation (RAG)
+The system runs as three coordinated AI agents:
 
+```
+Patient case input
+(notes · EHR · audio · HL7/FHIR)
+         │
+         ▼
+  ┌─────────────────────┐
+  │  Agent 1            │  Reads the case, extracts symptoms,
+  │  Preprocessing      │  maps to clinical codes (HPO/SNOMED)
+  └─────────┬───────────┘
+            │
+            ▼
+  ┌─────────────────────┐
+  │  Agent 2            │  Searches medical knowledge base,
+  │  Knowledge &        │  retrieves relevant guidelines and
+  │  Retrieval          │  evidence for this specific case
+  └─────────┬───────────┘
+            │
+            ▼
+  ┌─────────────────────┐
+  │  Agent 3            │  Coordinates the full pipeline,
+  │  Orchestrator       │  runs self-critique, scores confidence,
+  │                     │  writes the audit log
+  └─────────┬───────────┘
+            │
+            ▼
+  Safety & validation gate
+  (red-flag checks · confidence filter · disclaimer injection)
+            │
+            ▼
+  Physician dashboard
+  ┌──────────┬──────────┬──────────────────┐
+  │ Urgent   │ Ranked   │ Test             │
+  │ alerts   │ diffs    │ recommendations  │
+  └──────────┴──────────┴──────────────────┘
+```
+
+---
 ## Intended Users
 
-Clinicians and medical researchers investigating rare disease cases.
+Clinicians and medical researchers investigating family chronic disease cases.
 
 ## Status
 
