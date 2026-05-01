@@ -14,3 +14,4 @@ LLM differential diagnosis generation
 
 Week 9  
 Testing and evaluation
+- [ ] Fix datetime.utcnow() deprecation warnings in utils/models.py
