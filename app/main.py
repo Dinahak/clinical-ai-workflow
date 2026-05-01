@@ -2,23 +2,18 @@
 
 import streamlit as st
 import sys, os
+import tempfile
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from agents.documentation_agent import DiagnosticOrchestrator
 from tools.safety_gate import SafetyGate
 
-# ─────────────────────────────────────────
-#  PAGE CONFIG
-# ─────────────────────────────────────────
 st.set_page_config(
     page_title="Clinical AI — Family Medicine",
     page_icon="🩺",
     layout="wide"
 )
 
-# ─────────────────────────────────────────
-#  HEADER
-# ─────────────────────────────────────────
 st.title("🩺 Clinical AI — Family Medicine Assistant")
 st.caption(
     "AI-powered clinical decision support. "
@@ -31,7 +26,6 @@ st.divider()
 # ─────────────────────────────────────────
 with st.sidebar:
     st.header("Patient Details")
-
     case_id = st.text_input("Case ID", value="CASE001")
     age     = st.number_input("Age", min_value=1, max_value=120, value=44)
     sex     = st.selectbox("Sex", ["F", "M", "Other"])
@@ -53,42 +47,129 @@ with st.sidebar:
     st.subheader("Vitals (optional)")
     col1, col2 = st.columns(2)
     with col1:
-        hr = st.text_input("HR (bpm)", placeholder="88")
-        bp = st.text_input("BP",       placeholder="148/92")
+        hr   = st.text_input("HR (bpm)", placeholder="88")
+        bp   = st.text_input("BP",       placeholder="148/92")
     with col2:
-        temp = st.text_input("Temp °C", placeholder="37.2")
-        sats = st.text_input("O2 Sats", placeholder="98%")
+        temp = st.text_input("Temp °C",  placeholder="37.2")
+        sats = st.text_input("O2 Sats",  placeholder="98%")
 
 # ─────────────────────────────────────────
-#  MAIN — CONSULTATION NOTE INPUT
+#  MAIN — TWO TABS
 # ─────────────────────────────────────────
-st.subheader("Consultation Note")
-raw_input = st.text_area(
-    "Enter the patient presentation",
-    placeholder="e.g. 4-month history of fatigue, weight gain, feeling cold all the time, constipation and low mood. Hair has become thin and dry.",
-    height=150
-)
+tab_text, tab_audio = st.tabs([
+    "📝 Type Consultation Note",
+    "🎙️ Upload Audio Recording"
+])
 
-analyse = st.button("Analyse Case", type="primary", use_container_width=True)
+raw_input   = ""
+analyse     = False
+
+# ── Tab 1: Text input ──
+with tab_text:
+    st.subheader("Consultation Note")
+    raw_input_text = st.text_area(
+        "Enter the patient presentation",
+        placeholder="e.g. 4-month history of fatigue, weight gain, feeling cold all the time, constipation and low mood.",
+        height=150,
+        key="text_input"
+    )
+    if st.button("Analyse Case", type="primary",
+                 use_container_width=True, key="btn_text"):
+        raw_input = raw_input_text
+        analyse   = True
+
+# ── Tab 2: Audio upload ──
+with tab_audio:
+    st.subheader("Upload Consultation Recording")
+    st.info(
+        "Upload an audio recording of the consultation. "
+        "Whisper will transcribe it locally — "
+        "no audio data leaves your machine."
+    )
+
+    audio_file = st.file_uploader(
+        "Choose audio file",
+        type=["mp3", "wav", "m4a", "ogg", "flac"],
+        help="Supported formats: MP3, WAV, M4A, OGG, FLAC"
+    )
+
+    whisper_size = st.selectbox(
+        "Whisper model size",
+        ["tiny", "base", "small"],
+        index=1,
+        help="Base is recommended — good accuracy, runs on modest hardware"
+    )
+
+    if audio_file:
+        st.audio(audio_file, format=audio_file.type)
+
+        if st.button("Transcribe & Analyse",
+                     type="primary",
+                     use_container_width=True,
+                     key="btn_audio"):
+
+            with st.spinner("Transcribing audio with Whisper..."):
+                try:
+                    from data_processing.audio_transcriber import AudioTranscriber
+
+                    # save uploaded file to temp location
+                    suffix = os.path.splitext(audio_file.name)[1]
+                    with tempfile.NamedTemporaryFile(
+                        delete=False, suffix=suffix
+                    ) as tmp:
+                        tmp.write(audio_file.read())
+                        tmp_path = tmp.name
+
+                    # transcribe
+                    transcriber = AudioTranscriber(model_size=whisper_size)
+                    result      = transcriber.process_audio(tmp_path)
+                    os.unlink(tmp_path)
+
+                    # show transcript
+                    st.success("Transcription complete")
+                    st.subheader("Transcript")
+                    st.write(result["transcript"])
+
+                    # auto-fill from extracted case data
+                    case_data = result["case_data"]
+
+                    st.subheader("Extracted Case Data")
+                    col_a, col_b = st.columns(2)
+
+                    with col_a:
+                        if case_data["age"]:
+                            st.metric("Age detected",  case_data["age"])
+                        st.metric("Sex detected",  case_data["sex"])
+                        if case_data["pmh"]:
+                            st.write("**PMH:**", ", ".join(case_data["pmh"]))
+                        if case_data["medications"]:
+                            st.write("**Medications:**",
+                                     ", ".join(case_data["medications"]))
+
+                    with col_b:
+                        if case_data["vitals"]:
+                            for k, v in case_data["vitals"].items():
+                                st.metric(k.upper(), v)
+
+                    # set values for pipeline
+                    raw_input = result["transcript"]
+                    analyse   = True
+
+                except Exception as e:
+                    st.error(f"Transcription error: {str(e)}")
 
 # ─────────────────────────────────────────
-#  PROCESS AND DISPLAY
+#  RUN PIPELINE — SHARED BY BOTH TABS
 # ─────────────────────────────────────────
-if analyse:
-    if not raw_input.strip():
-        st.warning("Please enter a consultation note before analysing.")
-        st.stop()
-
-    # parse inputs
+if analyse and raw_input.strip():
     pmh         = [p.strip() for p in pmh_input.split("\n") if p.strip()]
-    medications = [m.strip() for m in med_input.split("\n") if m.strip()]
+    medications = [m.strip() for m in med_input.split("\n")  if m.strip()]
     vitals      = {}
     if hr:   vitals["hr"]   = hr
     if bp:   vitals["bp"]   = bp
     if temp: vitals["temp"] = temp
     if sats: vitals["sats"] = sats
 
-    # run pipeline
     with st.spinner("Running clinical AI pipeline..."):
         try:
             orch   = DiagnosticOrchestrator()
@@ -110,7 +191,7 @@ if analyse:
 
     st.divider()
 
-    # ── Urgent Alerts ──
+    # ── Urgent alerts ──
     if report.urgent_alerts:
         st.subheader("⚠️ Urgent Alerts")
         for alert in report.urgent_alerts:
@@ -140,7 +221,7 @@ if analyse:
                         for rf in diff.red_flags:
                             st.warning(rf)
         else:
-            st.info("No differentials extracted — try a more detailed consultation note.")
+            st.info("No differentials extracted — try a more detailed note.")
 
     with col_tests:
         st.subheader("Recommended Investigations")
@@ -151,7 +232,6 @@ if analyse:
                     "soon":    "🟡",
                     "routine": "🟢"
                 }.get(test.priority, "⚪")
-
                 st.markdown(f"**{i}. {priority_color} {test.test_name}**")
                 if test.rationale:
                     st.caption(test.rationale)
@@ -168,6 +248,4 @@ if analyse:
         st.caption(f"Model: qwen:1.8b")
 
     st.divider()
-
-    # ── Disclaimer ──
     st.warning(f"⚠️ {report.disclaimer}")
