@@ -163,8 +163,10 @@ class AudioTranscriber:
             vitals["hr"] = hr_match.group(1)
 
         # blood pressure
+        # blood pressure — handles both "148/92" and "148 over 92"
         bp_match = re.search(
-            r'(?:blood pressure|bp)[^\d]*(\d{2,3})[/\\](\d{2,3})', text
+            r'(?:blood pressure|bp)[^\d]*(\d{2,3})\s*(?:/|over)\s*(\d{2,3})',
+            text
         )
         if bp_match:
             vitals["bp"] = f"{bp_match.group(1)}/{bp_match.group(2)}"
